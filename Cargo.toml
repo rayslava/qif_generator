@@ -1,10 +1,19 @@
 [package]
 name = "qif_generator"
+description = "Library for QIF file generation"
 version = "0.1.0"
 authors = ["Slava Barinov <rayslava@gmail.com>"]
 edition = "2018"
+license = "MIT"
+keywords = ["qif", "quicken", "interchange"]
+categories = ["encoding"]
+documentation = "https://docs.rs/qif_generator"
+readme = "README.md"
+homepage = "https://github.com/rayslava/qif_generator"
+repository = "https://github.com/rayslava/qif_generator"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[badges]
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 chrono = "0.4"
