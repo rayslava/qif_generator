@@ -2,14 +2,16 @@ use std::fmt;
 extern crate chrono;
 
 /// QIF Account
-/// It has a account_type and vector of items
 pub struct Account {
+    /// Account name is used during QIF import
     pub name: String,
     pub account_type: AccountType,
+    /// Description is just comment and might be empty
     pub description: String,
 }
 
 /// QIF Account types
+/// There are different versions of QIF format, so this is minimal set
 pub enum AccountType {
     Bank,
     Cash,
@@ -35,12 +37,16 @@ impl fmt::Display for Account {
 
 /// Single QIF transaction
 pub struct Transaction {
+    /// Date of transaction, time is not supported in QIF format
     pub date: chrono::Date<chrono::Utc>,
     pub amount: f64,
     pub payee: String,
     pub memo: String,
+    /// Category is used when transaction is spent in single piece, otherwise
+    /// `splits` is used
     pub category: String,
     pub cleared_status: String,
+    /// Parts of transaction used for description of different categories
     pub splits: Vec<Split>,
 }
 
