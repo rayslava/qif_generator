@@ -4,8 +4,9 @@ extern crate chrono;
 /// QIF Account
 /// It has a account_type and vector of items
 pub struct Account {
+    pub name: String,
     pub account_type: AccountType,
-    pub items: Vec<Transaction>,
+    pub description: String,
 }
 
 /// QIF Account types
@@ -18,6 +19,20 @@ pub enum AccountType {
     LiabilityAccount,
 }
 
+impl fmt::Display for Account {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let type_string: String = match self.account_type {
+            AccountType::Bank => String::from("Bank"),
+            AccountType::Cash => String::from("Cash"),
+            AccountType::CreditCard => String::from("CCard"),
+            AccountType::Investment => String::from("Invst"),
+            AccountType::AssetAccount => String::from("Oth A"),
+            AccountType::LiabilityAccount => String::from("Oth L"),
+        };
+        writeln!(f, "!Account\nN{0}\nT{1}\n^", self.name, type_string)
+    }
+}
+
 /// Single QIF transaction
 pub struct Transaction {
     pub date: chrono::Date<chrono::Utc>,
@@ -27,23 +42,6 @@ pub struct Transaction {
     pub category: String,
     pub cleared_status: String,
     pub splits: Vec<Split>,
-}
-
-/// Represent a Split, which is basically a portion of a transaction
-pub struct Split {
-    pub category: String,
-    pub memo: String,
-    pub amount: f64,
-}
-
-impl fmt::Display for Split {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(
-            f,
-            "S{0}\nE{1}\n${2:.2}",
-            self.category, self.memo, self.amount
-        )
-    }
 }
 
 impl fmt::Display for Transaction {
@@ -65,13 +63,23 @@ impl fmt::Display for Transaction {
             }
         }
         writeln!(f, "^")
-        // D11/28/2020
-        // P
-        // MCleaners
-        // T-620.00
-        // C
-        // LExpenses:Transportation:Auto
-        // ^
+    }
+}
+
+/// Represent a Split, which is basically a portion of a transaction
+pub struct Split {
+    pub category: String,
+    pub memo: String,
+    pub amount: f64,
+}
+
+impl fmt::Display for Split {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(
+            f,
+            "S{0}\nE{1}\n${2:.2}",
+            self.category, self.memo, self.amount
+        )
     }
 }
 
@@ -158,6 +166,23 @@ $-10.00
 SCat2
 ESplit2
 $-20.00
+^
+"#
+        );
+    }
+
+    #[test]
+    fn account_format() {
+        let acc = Account {
+            name: String::from("TestAcc"),
+            account_type: AccountType::Cash,
+            description: String::from("Test"),
+        };
+        assert_eq!(
+            acc.to_string(),
+            r#"!Account
+NTestAcc
+TCash
 ^
 "#
         );
