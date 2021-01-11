@@ -90,9 +90,16 @@ impl Transaction {
         }
     }
 
-    pub fn with_split(mut self, val: Split) -> Self {
+    pub fn with_split(mut self, val: &Split) -> Self {
         self.amount += val.amount;
-        self.splits.push(val);
+        self.splits.push(val.clone());
+        self
+    }
+
+    pub fn with_splits(mut self, val: &[Split]) -> Self {
+        let sum = val.iter().fold(0.0f64, |acc, e| acc + e.amount);
+        self.amount = sum;
+        self.splits = val.to_owned();
         self
     }
 }
@@ -156,8 +163,8 @@ T0.00
             .date(Utc.ymd(2020, 11, 28))
             .category("testcat")
             .memo("testmemo")
-            .with_split(s1)
-            .with_split(s2)
+            .with_split(&s1)
+            .with_split(&s2)
             .build()
             .unwrap();
 
