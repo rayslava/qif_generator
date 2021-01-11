@@ -1,17 +1,19 @@
+use chrono::{Date, Utc};
 use std::fmt;
-extern crate chrono;
 
 /// QIF Account
+#[derive(Default, Debug)]
 pub struct Account {
     /// Account name is used during QIF import
-    pub name: String,
-    pub account_type: AccountType,
+    name: String,
+    account_type: AccountType,
     /// Description is just comment and might be empty
-    pub description: String,
+    description: String,
 }
 
 /// QIF Account types
 /// There are different versions of QIF format, so this is minimal set
+#[derive(Debug)]
 pub enum AccountType {
     Bank,
     Cash,
@@ -19,6 +21,12 @@ pub enum AccountType {
     Investment,
     AssetAccount,
     LiabilityAccount,
+}
+
+impl Default for AccountType {
+    fn default() -> Self {
+        AccountType::Bank
+    }
 }
 
 impl fmt::Display for Account {
@@ -35,19 +43,128 @@ impl fmt::Display for Account {
     }
 }
 
+impl Account {
+    pub fn new() -> Self {
+        Account::default()
+    }
+
+    pub fn name(mut self, val: &str) -> Self {
+        self.name = String::from(val);
+        self
+    }
+
+    pub fn description(mut self, val: &str) -> Self {
+        self.description = String::from(val);
+        self
+    }
+
+    pub fn account_type(mut self, val: AccountType) -> Self {
+        self.account_type = val;
+        self
+    }
+
+    pub fn build(self) -> Account {
+        Account {
+            name: self.name,
+            description: self.description,
+            account_type: self.account_type,
+        }
+    }
+}
+
 /// Single QIF transaction
+#[derive(Debug)]
 pub struct Transaction {
     /// Date of transaction, time is not supported in QIF format
-    pub date: chrono::Date<chrono::Utc>,
-    pub amount: f64,
-    pub payee: String,
-    pub memo: String,
+    date: Date<Utc>,
+    amount: f64,
+    payee: String,
+    memo: String,
     /// Category is used when transaction is spent in single piece, otherwise
     /// `splits` is used
-    pub category: String,
-    pub cleared_status: String,
+    category: String,
+    cleared_status: String,
     /// Parts of transaction used for description of different categories
-    pub splits: Vec<Split>,
+    splits: Vec<Split>,
+}
+
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Transaction {
+    pub fn new() -> Self {
+        Transaction {
+            date: Utc::today(),
+            amount: 0.0,
+            payee: String::new(),
+            memo: String::new(),
+            category: String::new(),
+            cleared_status: String::new(),
+            splits: Vec::new(),
+        }
+    }
+
+    pub fn date(mut self, val: Date<Utc>) -> Self {
+        self.date = val;
+        self
+    }
+
+    pub fn amount(mut self, val: f64) -> Self {
+        self.amount = val;
+        self
+    }
+
+    pub fn payee(mut self, val: &str) -> Self {
+        self.payee = String::from(val);
+        self
+    }
+
+    pub fn memo(mut self, val: &str) -> Self {
+        self.memo = String::from(val);
+        self
+    }
+
+    pub fn category(mut self, val: &str) -> Self {
+        self.category = String::from(val);
+        self
+    }
+
+    pub fn cleared_status(mut self, val: &str) -> Self {
+        self.cleared_status = String::from(val);
+        self
+    }
+
+    pub fn splits(mut self, val: Vec<Split>) -> Self {
+        self.splits = val;
+        self
+    }
+
+    pub fn build(self) -> Result<Transaction, String> {
+        if (self.splits.iter().fold(0.0f64, |acc, e| acc + e.amount) - self.amount).abs()
+            > f64::EPSILON
+        {
+            Err("Sum of splits is not equal resulting amount".to_string())
+        } else {
+            Ok(Transaction {
+                date: self.date,
+                amount: self.amount,
+                payee: self.payee,
+                memo: self.memo,
+                category: self.category,
+                cleared_status: self.cleared_status,
+                splits: self.splits,
+            })
+        }
+    }
+
+    pub fn with_split(mut self, val: Split) -> Self {
+        self.amount += val.amount;
+        self.splits.push(val);
+        self
+    }
 }
 
 impl fmt::Display for Transaction {
@@ -73,10 +190,40 @@ impl fmt::Display for Transaction {
 }
 
 /// Represent a Split, which is basically a portion of a transaction
+#[derive(Default, Debug, Clone)]
 pub struct Split {
-    pub category: String,
-    pub memo: String,
-    pub amount: f64,
+    category: String,
+    memo: String,
+    amount: f64,
+}
+
+impl Split {
+    pub fn new() -> Self {
+        Split::default()
+    }
+
+    pub fn category(mut self, val: &str) -> Self {
+        self.category = String::from(val);
+        self
+    }
+
+    pub fn memo(mut self, val: &str) -> Self {
+        self.memo = String::from(val);
+        self
+    }
+
+    pub fn amount(mut self, val: f64) -> Self {
+        self.amount = val;
+        self
+    }
+
+    pub fn build(self) -> Split {
+        Split {
+            category: self.category,
+            memo: self.memo,
+            amount: self.amount,
+        }
+    }
 }
 
 impl fmt::Display for Split {
@@ -96,16 +243,16 @@ mod receipt {
 
     #[test]
     fn split_format() {
-        let s = Split {
-            category: String::from("testcat"),
-            memo: String::from("testmemo"),
-            amount: -10.00,
-        };
-        let s2 = Split {
-            category: String::from("testcat"),
-            memo: String::new(),
-            amount: -10.00,
-        };
+        let s = Split::new()
+            .amount(-10.00)
+            .category("testcat")
+            .memo("testmemo")
+            .build();
+        let s2 = Split::new()
+            .amount(-10.00)
+            .category("testcat")
+            .memo("")
+            .build();
 
         assert_eq!(s.to_string(), "Stestcat\nEtestmemo\n$-10.00\n");
         assert_eq!(s2.to_string(), "Stestcat\nE\n$-10.00\n");
@@ -113,16 +260,14 @@ mod receipt {
 
     #[test]
     fn transaction_format() {
-        let dt = Utc.ymd(2020, 11, 28);
-        let t = Transaction {
-            date: dt,
-            category: String::from("testcat"),
-            memo: String::from("testmemo"),
-            amount: -10.00,
-            payee: String::new(),
-            cleared_status: String::new(),
-            splits: Vec::new(),
-        };
+        let t = Transaction::new()
+            .date(Utc.ymd(2020, 11, 28))
+            .category("testcat")
+            .memo("testmemo")
+            .amount(0.00)
+            .build()
+            .unwrap();
+
         assert_eq!(
             t.to_string(),
             r#"D11/28/2020
@@ -130,7 +275,7 @@ P
 Mtestmemo
 Ltestcat
 C
-T-10.00
+T0.00
 ^
 "#
         );
@@ -138,26 +283,18 @@ T-10.00
 
     #[test]
     fn split_transaction_format() {
-        let dt = Utc.ymd(2020, 11, 28);
-        let s1 = Split {
-            category: String::from("Cat1"),
-            memo: String::from("Split1"),
-            amount: -10.00,
-        };
-        let s2 = Split {
-            category: String::from("Cat2"),
-            memo: String::from("Split2"),
-            amount: -20.00,
-        };
-        let t = Transaction {
-            date: dt,
-            category: String::from("testcat"),
-            memo: String::from("testmemo"),
-            amount: -30.00,
-            payee: String::new(),
-            cleared_status: String::new(),
-            splits: vec![s1, s2],
-        };
+        let s1 = Split::new().category("Cat1").memo("Split1").amount(-10.00);
+        let s2 = Split::new().category("Cat2").memo("Split2").amount(-20.00);
+
+        let t = Transaction::new()
+            .date(Utc.ymd(2020, 11, 28))
+            .category("testcat")
+            .memo("testmemo")
+            .with_split(s1)
+            .with_split(s2)
+            .build()
+            .unwrap();
+
         assert_eq!(
             t.to_string(),
             r#"D11/28/2020
@@ -179,11 +316,12 @@ $-20.00
 
     #[test]
     fn account_format() {
-        let acc = Account {
-            name: String::from("TestAcc"),
-            account_type: AccountType::Cash,
-            description: String::from("Test"),
-        };
+        let acc = Account::new()
+            .name("TestAcc")
+            .account_type(AccountType::Cash)
+            .description("Test")
+            .build();
+
         assert_eq!(
             acc.to_string(),
             r#"!Account
