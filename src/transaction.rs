@@ -1,3 +1,4 @@
+use crate::account::Account;
 use crate::split::Split;
 use chrono::{Date, Utc};
 use std::fmt;
@@ -5,6 +6,7 @@ use std::fmt;
 /// Single QIF transaction
 #[derive(Debug)]
 pub struct Transaction {
+    account: Account,
     /// Date of transaction, time is not supported in QIF format
     date: Date<Utc>,
     amount: f64,
@@ -27,6 +29,7 @@ impl Default for Transaction {
 impl Transaction {
     pub fn new() -> Self {
         Transaction {
+            account: Account::new(),
             date: Utc::today(),
             amount: 0.0,
             payee: String::new(),
@@ -35,6 +38,11 @@ impl Transaction {
             cleared_status: String::new(),
             splits: Vec::new(),
         }
+    }
+
+    pub fn account(mut self, val: Account) -> Self {
+        self.account = val;
+        self
     }
 
     pub fn date(mut self, val: Date<Utc>) -> Self {
@@ -79,6 +87,7 @@ impl Transaction {
             Err("Sum of splits is not equal resulting amount".to_string())
         } else {
             Ok(Transaction {
+                account: self.account,
                 date: self.date,
                 amount: self.amount,
                 payee: self.payee,
@@ -102,13 +111,18 @@ impl Transaction {
         self.splits = val.to_owned();
         self
     }
+
+    pub fn sum(&self) -> f64 {
+        self.amount
+    }
 }
 
 impl fmt::Display for Transaction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "D{0}\nP{1}\nM{2}\nL{3}\nC{4}\nT{5:.2}",
+            "!Type:{0}\nD{1}\nP{2}\nM{3}\nL{4}\nC{5}\nT{6:.2}",
+            self.account.get_type().to_string(),
             self.date.format("%m/%d/%Y"),
             self.payee,
             self.memo,
@@ -129,12 +143,15 @@ impl fmt::Display for Transaction {
 #[cfg(test)]
 mod receipt {
     use super::*;
+    use crate::account::AccountType;
     use chrono::prelude::*;
 
     #[test]
     fn transaction_format() {
+        let a = Account::new().account_type(AccountType::Cash);
         let t = Transaction::new()
             .date(Utc.ymd(2020, 11, 28))
+            .account(a)
             .category("testcat")
             .memo("testmemo")
             .amount(0.00)
@@ -143,7 +160,8 @@ mod receipt {
 
         assert_eq!(
             t.to_string(),
-            r#"D11/28/2020
+            r#"!Type:Cash
+D11/28/2020
 P
 Mtestmemo
 Ltestcat
@@ -156,11 +174,14 @@ T0.00
 
     #[test]
     fn split_transaction_format() {
+        let a = Account::new().account_type(AccountType::Investment);
+
         let s1 = Split::new().category("Cat1").memo("Split1").amount(-10.00);
         let s2 = Split::new().category("Cat2").memo("Split2").amount(-20.00);
 
         let t = Transaction::new()
             .date(Utc.ymd(2020, 11, 28))
+            .account(a)
             .category("testcat")
             .memo("testmemo")
             .with_split(&s1)
@@ -170,7 +191,8 @@ T0.00
 
         assert_eq!(
             t.to_string(),
-            r#"D11/28/2020
+            r#"!Type:Invst
+D11/28/2020
 P
 Mtestmemo
 Ltestcat
