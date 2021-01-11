@@ -5,8 +5,8 @@ use std::fmt;
 
 /// Single QIF transaction
 #[derive(Debug)]
-pub struct Transaction {
-    account: Account,
+pub struct Transaction<'a> {
+    account: &'a Account,
     /// Date of transaction, time is not supported in QIF format
     date: Date<Utc>,
     amount: f64,
@@ -20,16 +20,10 @@ pub struct Transaction {
     splits: Vec<Split>,
 }
 
-impl Default for Transaction {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Transaction {
-    pub fn new() -> Self {
+impl<'a> Transaction<'a> {
+    pub fn new(acc: &'a Account) -> Self {
         Transaction {
-            account: Account::new(),
+            account: acc,
             date: Utc::today(),
             amount: 0.0,
             payee: String::new(),
@@ -38,11 +32,6 @@ impl Transaction {
             cleared_status: String::new(),
             splits: Vec::new(),
         }
-    }
-
-    pub fn account(mut self, val: Account) -> Self {
-        self.account = val;
-        self
     }
 
     pub fn date(mut self, val: Date<Utc>) -> Self {
@@ -80,7 +69,7 @@ impl Transaction {
         self
     }
 
-    pub fn build(self) -> Result<Transaction, String> {
+    pub fn build(self) -> Result<Transaction<'a>, String> {
         if (self.splits.iter().fold(0.0f64, |acc, e| acc + e.amount) - self.amount).abs()
             > f64::EPSILON
         {
@@ -117,7 +106,7 @@ impl Transaction {
     }
 }
 
-impl fmt::Display for Transaction {
+impl<'a> fmt::Display for Transaction<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
@@ -149,9 +138,8 @@ mod receipt {
     #[test]
     fn transaction_format() {
         let a = Account::new().account_type(AccountType::Cash);
-        let t = Transaction::new()
+        let t = Transaction::new(&a)
             .date(Utc.ymd(2020, 11, 28))
-            .account(a)
             .category("testcat")
             .memo("testmemo")
             .amount(0.00)
@@ -179,9 +167,8 @@ T0.00
         let s1 = Split::new().category("Cat1").memo("Split1").amount(-10.00);
         let s2 = Split::new().category("Cat2").memo("Split2").amount(-20.00);
 
-        let t = Transaction::new()
+        let t = Transaction::new(&a)
             .date(Utc.ymd(2020, 11, 28))
-            .account(a)
             .category("testcat")
             .memo("testmemo")
             .with_split(&s1)
