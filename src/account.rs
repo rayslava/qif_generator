@@ -12,7 +12,7 @@ pub struct Account {
 
 /// QIF Account types
 /// There are different versions of QIF format, so this is minimal set
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum AccountType {
     Bank,
     Cash,
@@ -28,9 +28,9 @@ impl Default for AccountType {
     }
 }
 
-impl fmt::Display for Account {
+impl fmt::Display for AccountType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let type_string: String = match self.account_type {
+        let type_string: String = match self {
             AccountType::Bank => String::from("Bank"),
             AccountType::Cash => String::from("Cash"),
             AccountType::CreditCard => String::from("CCard"),
@@ -38,7 +38,13 @@ impl fmt::Display for Account {
             AccountType::AssetAccount => String::from("Oth A"),
             AccountType::LiabilityAccount => String::from("Oth L"),
         };
-        writeln!(f, "!Account\nN{0}\nT{1}\n^", self.name, type_string)
+        write!(f, "{0}", type_string)
+    }
+}
+
+impl fmt::Display for Account {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "!Account\nN{0}\nT{1}\n^", self.name, self.account_type)
     }
 }
 
@@ -60,6 +66,10 @@ impl Account {
     pub fn account_type(mut self, val: AccountType) -> Self {
         self.account_type = val;
         self
+    }
+
+    pub fn get_type(&self) -> AccountType {
+        self.account_type
     }
 
     pub fn build(self) -> Account {
