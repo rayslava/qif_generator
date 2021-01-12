@@ -5,7 +5,7 @@ use std::fmt;
 pub struct Split {
     category: String,
     memo: String,
-    pub(in crate) amount: f64,
+    pub(in crate) amount: i64,
 }
 
 impl Split {
@@ -23,7 +23,7 @@ impl Split {
         self
     }
 
-    pub fn amount(mut self, val: f64) -> Self {
+    pub fn amount(mut self, val: i64) -> Self {
         self.amount = val;
         self
     }
@@ -39,10 +39,15 @@ impl Split {
 
 impl fmt::Display for Split {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let amount_line = format!("{0:03}", self.amount);
+
         writeln!(
             f,
-            "S{0}\nE{1}\n${2:.2}",
-            self.category, self.memo, self.amount
+            "S{0}\nE{1}\n${2}.{3}",
+            self.category,
+            self.memo,
+            &amount_line[..amount_line.len() - 2],
+            &amount_line[amount_line.len() - 2..]
         )
     }
 }
@@ -54,12 +59,12 @@ mod split_test {
     #[test]
     fn split_format() {
         let s = Split::new()
-            .amount(-10.00)
+            .amount(-1000)
             .category("testcat")
             .memo("testmemo")
             .build();
         let s2 = Split::new()
-            .amount(-10.00)
+            .amount(-1000)
             .category("testcat")
             .memo("")
             .build();

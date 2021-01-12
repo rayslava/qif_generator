@@ -9,7 +9,7 @@ pub struct Transaction<'a> {
     account: &'a Account,
     /// Date of transaction, time is not supported in QIF format
     date: Date<Utc>,
-    amount: f64,
+    amount: i64,
     payee: String,
     memo: String,
     /// Category is used when transaction is spent in single piece, otherwise
@@ -25,7 +25,7 @@ impl<'a> Transaction<'a> {
         Transaction {
             account: acc,
             date: Utc::today(),
-            amount: 0.0,
+            amount: 0,
             payee: String::new(),
             memo: String::new(),
             category: String::new(),
@@ -39,7 +39,7 @@ impl<'a> Transaction<'a> {
         self
     }
 
-    pub fn amount(mut self, val: f64) -> Self {
+    pub fn amount(mut self, val: i64) -> Self {
         self.amount = val;
         self
     }
@@ -70,9 +70,7 @@ impl<'a> Transaction<'a> {
     }
 
     pub fn build(self) -> Result<Transaction<'a>, String> {
-        if (self.splits.iter().fold(0.0f64, |acc, e| acc + e.amount) - self.amount).abs()
-            > f64::EPSILON
-        {
+        if self.splits.iter().fold(0, |acc, e| acc + e.amount) != self.amount {
             Err("Sum of splits is not equal resulting amount".to_string())
         } else {
             Ok(Transaction {
@@ -95,29 +93,32 @@ impl<'a> Transaction<'a> {
     }
 
     pub fn with_splits(mut self, val: &[Split]) -> Self {
-        let sum = val.iter().fold(0.0f64, |acc, e| acc + e.amount);
+        let sum = val.iter().fold(0, |acc, e| acc + e.amount);
         self.amount = sum;
         self.splits = val.to_owned();
         self
     }
 
-    pub fn sum(&self) -> f64 {
+    pub fn sum(&self) -> i64 {
         self.amount
     }
 }
 
 impl<'a> fmt::Display for Transaction<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let amount_line = format!("{0:03}", self.amount);
+
         writeln!(
             f,
-            "!Type:{0}\nD{1}\nP{2}\nM{3}\nL{4}\nC{5}\nT{6:.2}",
+            "!Type:{0}\nD{1}\nP{2}\nM{3}\nL{4}\nC{5}\nT{6}.{7}",
             self.account.get_type().to_string(),
             self.date.format("%m/%d/%Y"),
             self.payee,
             self.memo,
             self.category,
             self.cleared_status,
-            self.amount
+            &amount_line[..amount_line.len() - 2],
+            &amount_line[amount_line.len() - 2..]
         )?;
 
         if !self.splits.is_empty() {
@@ -142,7 +143,7 @@ mod receipt {
             .date(Utc.ymd(2020, 11, 28))
             .category("testcat")
             .memo("testmemo")
-            .amount(0.00)
+            .amount(0)
             .build()
             .unwrap();
 
@@ -164,8 +165,8 @@ T0.00
     fn split_transaction_format() {
         let a = Account::new().account_type(AccountType::Investment);
 
-        let s1 = Split::new().category("Cat1").memo("Split1").amount(-10.00);
-        let s2 = Split::new().category("Cat2").memo("Split2").amount(-20.00);
+        let s1 = Split::new().category("Cat1").memo("Split1").amount(-1000);
+        let s2 = Split::new().category("Cat2").memo("Split2").amount(-2000);
 
         let t = Transaction::new(&a)
             .date(Utc.ymd(2020, 11, 28))
