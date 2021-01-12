@@ -5,6 +5,7 @@ use std::fmt;
 pub struct Split {
     category: String,
     memo: String,
+    /// Last two digits is cents
     pub(in crate) amount: i64,
 }
 

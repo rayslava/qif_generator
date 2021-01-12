@@ -9,14 +9,17 @@ pub struct Transaction<'a> {
     account: &'a Account,
     /// Date of transaction, time is not supported in QIF format
     date: Date<Utc>,
+    /// Last two digits is cents
     amount: i64,
     payee: String,
     memo: String,
     /// Category is used when transaction is spent in single piece, otherwise
-    /// `splits` is used
+    /// `splits` is used with local categorization
     category: String,
     cleared_status: String,
-    /// Parts of transaction used for description of different categories
+    /// Parts of transaction used for description of different categories.
+    /// `Transaction` owns this vector since all splits do only have meaning in
+    /// scope of the transaction.
     splits: Vec<Split>,
 }
 
@@ -64,8 +67,10 @@ impl<'a> Transaction<'a> {
         self
     }
 
-    pub fn splits(mut self, val: Vec<Split>) -> Self {
-        self.splits = val;
+    pub fn splits(mut self, val: &[Split]) -> Self {
+        let sum = val.iter().fold(0, |acc, e| acc + e.amount);
+        self.amount = sum;
+        self.splits = val.to_owned();
         self
     }
 
@@ -89,13 +94,6 @@ impl<'a> Transaction<'a> {
     pub fn with_split(mut self, val: &Split) -> Self {
         self.amount += val.amount;
         self.splits.push(val.clone());
-        self
-    }
-
-    pub fn with_splits(mut self, val: &[Split]) -> Self {
-        let sum = val.iter().fold(0, |acc, e| acc + e.amount);
-        self.amount = sum;
-        self.splits = val.to_owned();
         self
     }
 
@@ -174,6 +172,43 @@ T0.00
             .memo("testmemo")
             .with_split(&s1)
             .with_split(&s2)
+            .build()
+            .unwrap();
+
+        assert_eq!(
+            t.to_string(),
+            r#"!Type:Invst
+D11/28/2020
+P
+Mtestmemo
+Ltestcat
+C
+T-30.00
+SCat1
+ESplit1
+$-10.00
+SCat2
+ESplit2
+$-20.00
+^
+"#
+        );
+    }
+
+    #[test]
+    fn split_list_check() {
+        let a = Account::new().account_type(AccountType::Investment);
+
+        let s1 = Split::new().category("Cat1").memo("Split1").amount(-1000);
+        let s2 = Split::new().category("Cat2").memo("Split2").amount(-2000);
+
+        let splits = vec![s1, s2];
+
+        let t = Transaction::new(&a)
+            .date(Utc.ymd(2020, 11, 28))
+            .category("testcat")
+            .memo("testmemo")
+            .splits(&splits)
             .build()
             .unwrap();
 

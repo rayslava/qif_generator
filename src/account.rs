@@ -6,12 +6,13 @@ pub struct Account {
     /// Account name is used during QIF import
     name: String,
     account_type: AccountType,
-    /// Description is just comment and might be empty
     description: String,
 }
 
 /// QIF Account types
-/// There are different versions of QIF format, so this is minimal set
+///
+/// There are different versions of QIF format descriptions, so this is minimal
+/// set
 #[derive(Debug, Clone, Copy)]
 pub enum AccountType {
     Bank,
