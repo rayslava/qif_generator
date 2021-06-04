@@ -24,10 +24,18 @@ pub enum AccountType {
     LiabilityAccount,
 }
 
-impl FromStr for AccountType {
-    type Err = ();
+#[derive(Default, Debug)]
+pub struct ParseAccountTypeErr();
 
-    fn from_str(input: &str) -> Result<AccountType, Self::Err> {
+impl fmt::Display for ParseAccountTypeErr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Can't parse AccountType")
+    }
+}
+
+impl FromStr for AccountType {
+    type Err = ParseAccountTypeErr;
+    fn from_str(input: &str) -> Result<AccountType, ParseAccountTypeErr> {
         match input {
             "Bank" => Ok(AccountType::Bank),
             "Cash" => Ok(AccountType::Cash),
@@ -35,7 +43,7 @@ impl FromStr for AccountType {
             "Investment" => Ok(AccountType::Investment),
             "AssetAccount" => Ok(AccountType::AssetAccount),
             "LiabilityAccount" => Ok(AccountType::LiabilityAccount),
-            _ => Err(()),
+            _ => Err(ParseAccountTypeErr {}),
         }
     }
 }
