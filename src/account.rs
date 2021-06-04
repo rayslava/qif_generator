@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 /// QIF Account
 #[derive(Default, Debug)]
@@ -13,7 +14,7 @@ pub struct Account {
 ///
 /// There are different versions of QIF format descriptions, so this is minimal
 /// set
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AccountType {
     Bank,
     Cash,
@@ -21,6 +22,22 @@ pub enum AccountType {
     Investment,
     AssetAccount,
     LiabilityAccount,
+}
+
+impl FromStr for AccountType {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<AccountType, Self::Err> {
+        match input {
+            "Bank" => Ok(AccountType::Bank),
+            "Cash" => Ok(AccountType::Cash),
+            "CreditCard" => Ok(AccountType::CreditCard),
+            "Investment" => Ok(AccountType::Investment),
+            "AssetAccount" => Ok(AccountType::AssetAccount),
+            "LiabilityAccount" => Ok(AccountType::LiabilityAccount),
+            _ => Err(()),
+        }
+    }
 }
 
 impl Default for AccountType {
@@ -102,5 +119,25 @@ TCash
 ^
 "#
         );
+    }
+
+    fn cmp(s: &str, a: AccountType) -> bool {
+        let result = AccountType::from_str(s).map_err(|e| e);
+        if result.is_err() {
+            false
+        } else {
+            return a == result.unwrap();
+        }
+    }
+
+    #[test]
+    fn account_parse() {
+        assert!(cmp("Bank", AccountType::Bank));
+        assert!(cmp("Cash", AccountType::Cash));
+        assert!(cmp("CreditCard", AccountType::CreditCard));
+        assert!(cmp("Investment", AccountType::Investment));
+        assert!(cmp("AssetAccount", AccountType::AssetAccount));
+        assert!(cmp("LiabilityAccount", AccountType::LiabilityAccount));
+        assert_eq!(cmp("asdf", AccountType::Bank), false);
     }
 }
