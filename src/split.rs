@@ -6,7 +6,7 @@ pub struct Split {
     category: String,
     memo: String,
     /// Last two digits is cents
-    pub(in crate) amount: i64,
+    pub(crate) amount: i64,
 }
 
 impl Split {

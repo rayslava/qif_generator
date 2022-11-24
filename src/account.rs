@@ -14,7 +14,7 @@ pub struct Account {
 ///
 /// There are different versions of QIF format descriptions, so this is minimal
 /// set
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccountType {
     Bank,
     Cash,
@@ -130,11 +130,10 @@ TCash
     }
 
     fn cmp(s: &str, a: AccountType) -> bool {
-        let result = AccountType::from_str(s).map_err(|e| e);
-        if result.is_err() {
-            false
+        if let Ok(result) = AccountType::from_str(s) {
+            a == result
         } else {
-            return a == result.unwrap();
+            false
         }
     }
 
@@ -146,6 +145,6 @@ TCash
         assert!(cmp("Investment", AccountType::Investment));
         assert!(cmp("AssetAccount", AccountType::AssetAccount));
         assert!(cmp("LiabilityAccount", AccountType::LiabilityAccount));
-        assert_eq!(cmp("asdf", AccountType::Bank), false);
+        assert!(!cmp("asdf", AccountType::Bank));
     }
 }
