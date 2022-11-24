@@ -1,6 +1,6 @@
 use crate::account::Account;
 use crate::split::Split;
-use chrono::{Date, Utc};
+use chrono::{DateTime, Utc};
 use std::fmt;
 
 /// Single QIF transaction
@@ -8,7 +8,7 @@ use std::fmt;
 pub struct Transaction<'a> {
     account: &'a Account,
     /// Date of transaction, time is not supported in QIF format
-    date: Date<Utc>,
+    date: DateTime<Utc>,
     /// Last two digits is cents
     amount: i64,
     payee: String,
@@ -27,7 +27,7 @@ impl<'a> Transaction<'a> {
     pub fn new(acc: &'a Account) -> Self {
         Transaction {
             account: acc,
-            date: Utc::today(),
+            date: Utc::now(),
             amount: 0,
             payee: String::new(),
             memo: String::new(),
@@ -37,7 +37,7 @@ impl<'a> Transaction<'a> {
         }
     }
 
-    pub fn date(mut self, val: Date<Utc>) -> Self {
+    pub fn date(mut self, val: DateTime<Utc>) -> Self {
         self.date = val;
         self
     }
@@ -109,7 +109,7 @@ impl<'a> fmt::Display for Transaction<'a> {
         writeln!(
             f,
             "!Type:{0}\nD{1}\nP{2}\nM{3}\nL{4}\nC{5}\nT{6}.{7}",
-            self.account.get_type().to_string(),
+            self.account.get_type(),
             self.date.format("%m/%d/%Y"),
             self.payee,
             self.memo,
@@ -138,7 +138,7 @@ mod receipt {
     fn transaction_format() {
         let a = Account::new().account_type(AccountType::Cash);
         let t = Transaction::new(&a)
-            .date(Utc.ymd(2020, 11, 28))
+            .date(Utc.with_ymd_and_hms(2020, 11, 28, 0, 0, 0).unwrap())
             .category("testcat")
             .memo("testmemo")
             .amount(0)
@@ -167,7 +167,7 @@ T0.00
         let s2 = Split::new().category("Cat2").memo("Split2").amount(-2000);
 
         let t = Transaction::new(&a)
-            .date(Utc.ymd(2020, 11, 28))
+            .date(Utc.with_ymd_and_hms(2020, 11, 28, 0, 0, 0).unwrap())
             .category("testcat")
             .memo("testmemo")
             .with_split(&s1)
@@ -205,7 +205,7 @@ $-20.00
         let splits = vec![s1, s2];
 
         let t = Transaction::new(&a)
-            .date(Utc.ymd(2020, 11, 28))
+            .date(Utc.with_ymd_and_hms(2020, 11, 28, 0, 0, 0).unwrap())
             .category("testcat")
             .memo("testmemo")
             .splits(&splits)
